@@ -39,6 +39,8 @@ class GUI:
         self.logo = tk.PhotoImage(file=f"{self.LOGO}")
         self.logo_label = ttk.Label(root, image=self.logo, padding=5)
 
+        self.home_buttons = list()
+        self.home_button_names = ["Import", "Export"]
         self.select_buttons = list()
         self.dists = list()
         self.labels = list()
@@ -61,6 +63,34 @@ class GUI:
     def run(self):
         root = self.root
 
+        for widget in tk.Frame(root).winfo_children():
+            widget.destroy()
+
+        if os.name == "posix":
+            root.iconphoto(False, self.logo)
+        else:  # Windows
+            root.iconbitmap("./assets/bb_logo.ico")
+
+        # There are three geometry managers: pack, grid, place
+        self.logo_label.pack()
+
+        for i, button_name in enumerate(self.home_button_names):
+            self.home_buttons.append(
+                ttk.Button(
+                    root,
+                    text=button_name,
+                    command=lambda name=button_name : self.route_request(name),
+                )
+            )
+
+        for button in self.home_buttons:
+            button.pack(expand=True)
+
+        root.mainloop()
+
+    def show_import_frame(self):
+        root = self.root
+
         if os.name == "posix":
             root.iconphoto(False, self.logo)
         else:  # Windows
@@ -75,6 +105,9 @@ class GUI:
         self.start_button.pack(expand=True)
         root.mainloop()
 
+    def show_export_frame(self):
+        pass
+
     def select_file(self, dist):
         filetypes = (
             ("text files", "*.md"),
@@ -88,6 +121,18 @@ class GUI:
         )
         dist.filename = filename
         self.labels[dist.id].config(text=filename)
+
+    def route_request(self, request):
+        print(request)
+        match request:
+            case "Import":
+                for button in self.home_buttons:
+                    button.forget()
+                self.show_import_frame()
+            case "Export":
+                for button in self.home_buttons:
+                    button.forget()
+                self.show_export_frame()
 
 
 if __name__ == "__main__":
