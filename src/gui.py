@@ -3,12 +3,7 @@ import tkinter as tk
 from tkinter import filedialog as fd
 from tkinter import ttk
 
-
-class Dist:
-    def __init__(self, name, index, filename=""):
-        self.name = name
-        self.id = index
-        self.filename = filename
+from src.distributor import Dist
 
 
 class GUI:
@@ -39,13 +34,25 @@ class GUI:
         self.logo = tk.PhotoImage(file=f"{self.LOGO}")
         self.logo_label = ttk.Label(root, image=self.logo, padding=5)
 
+        if os.name == "posix":
+            root.iconphoto(False, self.logo)
+        else:  # Windows
+            root.iconbitmap("./assets/bb_logo.ico")
+
         self.home_buttons = list()
         self.home_button_names = ["Import", "Export"]
         self.select_buttons = list()
         self.dists = list()
         self.labels = list()
+        self.dists = list()
         self.start_button = tk.Button(
-            root, text="Starte Import", command=lambda: print("start")
+            root,
+            text="Starte Import",
+            command=lambda d=self.dists: print(
+                f"{d[0].name}: {d[0].filename}\n"
+                f"{d[1].name}: {d[1].filename}\n"
+                f"{d[2].name}: {d[2].filename}"
+            ),
         )
 
         for i, dist_name in enumerate(self.DIST):
@@ -55,21 +62,13 @@ class GUI:
                 ttk.Button(
                     root,
                     text=f"Öffne {dist_name}-Datei",
-                    command=lambda: self.select_file(dist),
+                    command=lambda d=dist: self.select_file(d),
                 )
             )
             self.labels.append(tk.Label(root, text=f"Noch keine Datei gewählt."))
 
     def run(self):
         root = self.root
-
-        for widget in tk.Frame(root).winfo_children():
-            widget.destroy()
-
-        if os.name == "posix":
-            root.iconphoto(False, self.logo)
-        else:  # Windows
-            root.iconbitmap("./assets/bb_logo.ico")
 
         # There are three geometry managers: pack, grid, place
         self.logo_label.pack()
@@ -79,7 +78,7 @@ class GUI:
                 ttk.Button(
                     root,
                     text=button_name,
-                    command=lambda name=button_name : self.route_request(name),
+                    command=lambda name=button_name: self.route_request(name),
                 )
             )
 
@@ -91,13 +90,6 @@ class GUI:
     def show_import_frame(self):
         root = self.root
 
-        if os.name == "posix":
-            root.iconphoto(False, self.logo)
-        else:  # Windows
-            root.iconbitmap("./assets/bb_logo.ico")
-
-        # There are three geometry managers: pack, grid, place
-        self.logo_label.pack()
         for dist in self.dists:
             self.select_buttons[dist.id].pack(ipadx=20)
             self.labels[dist.id].pack()
@@ -115,12 +107,12 @@ class GUI:
         )
 
         filename = fd.askopenfilename(
-            title="Bitte Datei wählen",
+            title="Bitte Importdatei wählen",
             initialdir="./",
             filetypes=filetypes,
         )
         dist.filename = filename
-        self.labels[dist.id].config(text=filename)
+        self.labels[dist.id].config(text=f"{dist.name}: {filename}")
 
     def route_request(self, request):
         print(request)
