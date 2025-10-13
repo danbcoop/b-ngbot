@@ -13,12 +13,7 @@ class GUI:
     GEOMETRY = "600x400"
     LOGO = "./assets/bb_logo.png"
     ICON = "./assets/bb_logo.ico"
-
-    # Button texts
-    SELECT_DC = "Wähle DC-Datei"
-    SELECT_MAR = "Wähle Marvel-Datei"
-
-    DIST = [
+    DIST_NAMES = [
         "Marvel",
         "Lunar",
         "Previews",
@@ -31,6 +26,12 @@ class GUI:
         root.title(f"{self.TITLE}")
         root.geometry(f"{self.GEOMETRY}")
 
+        self.home_buttons = list()
+        self.home_button_names = ["Import", "Export"]
+        self.select_buttons = list()
+        self.dists = list()
+        self.labels = list()
+
         self.logo = tk.PhotoImage(file=f"{self.LOGO}")
         self.logo_label = ttk.Label(root, image=self.logo, padding=5)
 
@@ -39,41 +40,13 @@ class GUI:
         else:  # Windows
             root.iconbitmap("./assets/bb_logo.ico")
 
-        self.home_buttons = list()
-        self.home_button_names = ["Import", "Export"]
-        self.select_buttons = list()
-        self.dists = list()
-        self.labels = list()
-        self.dists = list()
-        self.start_button = tk.Button(
-            root,
-            text="Starte Import",
-            command=lambda d=self.dists: print(
-                f"{d[0].name}: {d[0].filename}\n"
-                f"{d[1].name}: {d[1].filename}\n"
-                f"{d[2].name}: {d[2].filename}"
-            ),
-        )
-
-        for i, dist_name in enumerate(self.DIST):
-            dist = Dist(dist_name, i)
-            self.dists.append(dist)
-            self.select_buttons.append(
-                ttk.Button(
-                    root,
-                    text=f"Öffne {dist_name}-Datei",
-                    command=lambda d=dist: self.select_file(d),
-                )
-            )
-            self.labels.append(tk.Label(root, text=f"Noch keine Datei gewählt."))
-
     def run(self):
         root = self.root
 
         # There are three geometry managers: pack, grid, place
         self.logo_label.pack()
 
-        for i, button_name in enumerate(self.home_button_names):
+        for button_name in self.home_button_names:
             self.home_buttons.append(
                 ttk.Button(
                     root,
@@ -90,11 +63,36 @@ class GUI:
     def show_import_frame(self):
         root = self.root
 
+        status = tk.Label(root, text="Wähle Importdateien und drücke Start.")
+
+        for i, dist_name in enumerate(self.DIST_NAMES):
+            dist = Dist(dist_name, i)
+            self.dists.append(dist)
+            self.select_buttons.append(
+                ttk.Button(
+                    root,
+                    text=f"Wähle {dist_name}-Datei",
+                    command=lambda d=dist: self.select_file(d),
+                )
+            )
+            self.labels.append(tk.Label(root, text="Noch keine Datei gewählt."))
+
+        self.start_button = tk.Button(
+            root,
+            text="Starte Import",
+            command=lambda d=self.dists: print(
+                f"{d[0].name}: {d[0].filename}\n"
+                f"{d[1].name}: {d[1].filename}\n"
+                f"{d[2].name}: {d[2].filename}"
+            ),
+        )
+
         for dist in self.dists:
             self.select_buttons[dist.id].pack(ipadx=20)
             self.labels[dist.id].pack()
 
         self.start_button.pack(expand=True)
+        status.pack()
         root.mainloop()
 
     def show_export_frame(self):
@@ -115,7 +113,6 @@ class GUI:
         self.labels[dist.id].config(text=f"{dist.name}: {filename}")
 
     def route_request(self, request):
-        print(request)
         match request:
             case "Import":
                 for button in self.home_buttons:
