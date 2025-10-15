@@ -6,17 +6,27 @@ from tkinter import ttk
 from src.distributor import Dist
 
 
+def ospath(path: str) -> str:
+    if os.name == "posix":
+        return path
+    else:  # Windows
+        return path.replace("/", "\\")
+
+
+FILESDIR = ospath("./files")
+
+
 class GUI:
     """GUI to interface the bot"""
 
     TITLE = "Bäng Bot 2.0"
     GEOMETRY = "600x400"
-    LOGO = "./assets/bb_logo.png"
-    ICON = "./assets/bb_logo.ico"
+    LOGO = ospath("./assets/bb_logo.png")
+    ICON = ospath("./assets/bb_logo.ico")
     DIST_NAMES = [
-        "Marvel",
-        "Lunar",
-        "Previews",
+        "DC",
+        "DIAMOND",
+        "PRH",
     ]
 
     def __init__(self):
@@ -38,7 +48,7 @@ class GUI:
         if os.name == "posix":
             root.iconphoto(False, self.logo)
         else:  # Windows
-            root.iconbitmap("./assets/bb_logo.ico")
+            root.iconbitmap(LOGO)
 
     def run(self):
         root = self.root
@@ -63,7 +73,7 @@ class GUI:
     def show_import_frame(self):
         root = self.root
 
-        status = tk.Label(root, text="Wähle Importdateien und drücke Start.")
+        self.status = tk.Label(root, text="Wähle Importdateien und drücke Start.")
 
         for i, dist_name in enumerate(self.DIST_NAMES):
             dist = Dist(dist_name, i)
@@ -75,24 +85,22 @@ class GUI:
                     command=lambda d=dist: self.select_file(d),
                 )
             )
-            self.labels.append(tk.Label(root, text="Noch keine Datei gewählt."))
+            self.labels.append(
+                tk.Label(root, text=f"{dist_name}: {default_filename(dist)}")
+            )
 
         self.start_button = tk.Button(
             root,
-            text="Starte Import",
-            command=lambda d=self.dists: print(
-                f"{d[0].name}: {d[0].filename}\n"
-                f"{d[1].name}: {d[1].filename}\n"
-                f"{d[2].name}: {d[2].filename}"
-            ),
+            text="Weiter",
+            command=self.import_order_files,
         )
 
         for dist in self.dists:
-            self.select_buttons[dist.id].pack(ipadx=20)
             self.labels[dist.id].pack()
+            self.select_buttons[dist.id].pack(ipadx=20)
 
         self.start_button.pack(expand=True)
-        status.pack()
+        self.status.pack()
         root.mainloop()
 
     def show_export_frame(self):
@@ -100,13 +108,13 @@ class GUI:
 
     def select_file(self, dist):
         filetypes = (
-            ("text files", "*.md"),
+            ("Tabellen", "*.xls*"),
             ("All files", "*.*"),
         )
 
         filename = fd.askopenfilename(
             title="Bitte Importdatei wählen",
-            initialdir="./",
+            initialdir=FILESDIR,
             filetypes=filetypes,
         )
         dist.filename = filename
@@ -122,6 +130,72 @@ class GUI:
                 for button in self.home_buttons:
                     button.forget()
                 self.show_export_frame()
+
+    def import_order_files(self):
+        for dist in self.dists:
+            dist.load()
+            if dist.orderlist.empty:
+                self.status.config(text=f"{dist.filename} konnte nicht geladen werden")
+                return
+        self._import_order_files()
+
+
+    def _import_order_files(self):
+        root = self.root
+
+        status = tk.Label(root, text="Wähle Importdateien und drücke Start.")
+
+        for button in self.select_buttons:
+            button.forget()
+
+        for label in self.labels:
+            label.forget()
+
+        def show_selection(option):
+            print(f"Selected option: {option.get()}")
+
+        self.dists[0].orderlist.reduce(["Code", "Retail", "Title", "IssueNumber"])
+        # self.dists[2].to_excel()
+        # x=self.dists[2].orderlist.get()
+        # static NDEX=0
+        # x=x.map(lambda _: INDEX+1)
+        for i, row in self.dists[0].orderlist.data.iterrows():
+            code = row.at['Code']
+            row.at['Code'] = f"{code[4:6]}{code[0:4]}{code[6:]}"
+        for i, row in self.dists[0].orderlist.data.iterrows():
+            print(row.at['Code'])
+        options = self.dists[2].orderlist.cols()
+        selected_option = tk.StringVar(value=options[2])
+
+        option_menu = tk.OptionMenu(
+            root,
+            selected_option,
+            *options,
+            command=lambda option: show_selection(selected_option),
+        )
+        option_menu.pack()
+        # self.start_button.config(text="Starte Import", command=lambda: print("TODO"))
+
+        root.mainloop()
+
+
+def default_filename(dist: Dist) -> str:
+    ls = os.listdir(FILESDIR)
+    for filename in ls:
+        if candidate_found(filename, [dist.name]):
+            filename = os.path.join(FILESDIR, filename)
+            dist.filename = filename
+            return filename
+
+    return "Bitte eine Bestellliste wählen."
+
+
+def candidate_found(find_in: str, find: list[str]) -> bool:
+    for s in find:
+        print(f"suche {s} in {find_in}")
+        if find_in.find(s) >= 0:
+            return True
+    return False
 
 
 if __name__ == "__main__":
