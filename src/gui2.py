@@ -8,7 +8,7 @@ import pandas as pd
 
 from src.distributor import Dist, OrderList
 from src.helper import (FILESDIR, default_col_name, default_filename,
-                        lunar_to_poc, ospath, write_to_dbf)
+                        ospath, write_to_dbf)
 
 
 class GUI:
