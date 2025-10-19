@@ -282,9 +282,16 @@ class GUI:
         dist.rename_and_drop(new_names)
 
 
-def remove_year(s: str) -> str:
-    return s[:4] + s[5:]
+def code_remove_year(s: str) -> str:
+    # 1025DC0050 -> 105DC005
+    return s[:2] + s[3:]
 
+
+def code_adjust_lunar(s: str) -> str:
+    if len(s) > 0:
+        s =code_remove_year(s)
+    # 105DC005 -> DC105005
+    return s[3:5] + s[:3] + s[5:]
 
 def write_to_dbf(orders):
     with dbf.Dbf("ami.dbf", new=True) as db:
@@ -313,7 +320,7 @@ def add_record(db, row, order):
             rec["PRICE"] = float(row.at["Price"])
             rec["SUPPLIER"] = "DIA"
         case "DC":
-            rec[b"POCODE"] = row.at["MgCode"]
+            rec[b"POCODE"] = code_adjust_lunar(row.at["Code"])
             rec[b"TITLE"] = row.at["Title"]
             rec[b"ISSUE"] = row.at["Issue"]
             rec[b"PRICE"] = float(row.at["Price"])

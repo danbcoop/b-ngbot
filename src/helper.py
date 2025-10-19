@@ -1,5 +1,6 @@
 import os
 
+from dbfpy3 import dbf
 from src.distributor import Dist
 
 
@@ -35,3 +36,57 @@ def candidate_found(find_in: str, find: list[str]) -> bool:
         if find_in.find(s) >= 0:
             return True
     return False
+
+
+def code_remove_year(s: str) -> str:
+    # 1025DC0050 -> 105DC005
+    return s[:2] + s[3:]
+
+
+def lunar_to_poc(s: str) -> str:
+    if len(s) > 9:
+        s = code_remove_year(s)
+    # 105DC005 -> DC105005
+    return s[3:5] + s[:3] + s[5:]
+
+
+def write_to_dbf(orders):
+    with dbf.Dbf("ami.dbf", new=True) as db:
+        db.add_field(
+            ("C", "POCODE", 9),
+            ("C", "TITLE", 50),
+            ("C", "ISSUE", 10),
+            ("N", "PRICE", 9, 2),
+            ("C", "SUPPLIER", 3),
+            ("N", "GESAMTBEST", 5, 0),
+            ("N", "TEMPORARY", 3, 0),
+            ("C", "DISCCODE", 2),
+        )
+        for order in orders:
+            for i, row in order.orderlist.data.iterrows():
+                add_record(db, row, order.name)
+
+
+def add_record(db, row, order):
+    rec = db.new()
+    match order:
+        case "DIAMOND":
+            rec["POCODE"] = row.at["Code"]
+            rec["TITLE"] = row.at["Title"]
+            rec["ISSUE"] = row.at["Issue"]
+            rec["PRICE"] = float(row.at["Price"])
+            rec["SUPPLIER"] = "DIA"
+        case "DC":
+            rec["POCODE"] = lunar_to_poc(row.at["Code"])
+            rec["TITLE"] = row.at["Title"]
+            rec["ISSUE"] = row.at["Issue"]
+            rec["PRICE"] = float(row.at["Price"])
+            rec["SUPPLIER"] = "PEP"
+        case "PRH":
+            rec["POCODE"] = row.at["MgCode"]
+            rec["TITLE"] = row.at["Title"]
+            rec["ISSUE"] = row.at["Issue"]
+            rec["PRICE"] = float(row.at["Price"])
+            rec["SUPPLIER"] = "MOD"
+
+    db.write(rec)
