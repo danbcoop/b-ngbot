@@ -8,7 +8,8 @@ import pandas as pd
 
 from src.distributor import Dist, OrderList
 from src.helper import (FILESDIR, default_col_name, default_filename,
-                        ospath, write_to_dbf)
+                        default_invoice, default_start_string, ospath,
+                        type_invoice, write_to_dbf)
 
 
 class GUI:
@@ -71,6 +72,8 @@ class GUI:
                     dist = self.dists.pop()
                     self.current = ColsFrame(self.root, dist)
                     self.dists_prepared.append(dist)
+            case "Lieferschein eintippen":
+                self.current = TypeInFrame(self.root)
 
             case _:
                 self.root.quit()
@@ -82,7 +85,8 @@ class GUI:
         write_to_dbf(self.dists)
         for dist in self.dists:
             dist.to_excel()
-        tk.messagebox.showinfo(title=None, message="Import erfolgreich abgeschlossen!")
+        tk.messagebox.showinfo(
+            title=None, message="Import erfolgreich abgeschlossen!")
 
     def add_mg_codes(self):
         start = self.dists[0].orderlist.data.shape[0] + 1
@@ -202,7 +206,8 @@ class ColsFrame:
             selected_option = tk.StringVar(value=default_col_name(dist, col))
             self.option_vars.append(selected_option)
             self.col_options.append(
-                ttk.Combobox(root, textvariable=selected_option, state="readonly")
+                ttk.Combobox(root, textvariable=selected_option,
+                             state="readonly")
             )
             self.option_labels.append(tk.Label(root, text=f"{col}:"))
 
@@ -212,22 +217,21 @@ class ColsFrame:
             self.option_labels[i].pack()
             self.col_options[i].pack()
 
-        self.cont_button = ttk.Button(
+        cont_button = ttk.Button(
             root,
             text="Weiter",
             command=lambda: self.cont(dist, root.frame),
         )
-        self.cont_button.pack(expand=True)
+        self.option_labels.append(cont_button)
+        cont_button.pack(expand=True)
 
     def destroy(self):
-        for element in self.col_options + self.option_labels + [self.cont_button]:
+        for element in self.col_options + self.option_labels:
             element.destroy()
 
     def cont(self, dist, frame):
         self.set_col_names(dist)
         frame.set("Cols")
-
-        options = dist.orderlist.cols()
 
     def set_col_names(self, dist):
         new_names = dict()
@@ -236,6 +240,66 @@ class ColsFrame:
             new_names[self.option_vars[i].get()] = col
 
         dist.rename_and_drop(new_names)
+
+
+class TypeInFrame:
+    def __init__(self, root):
+        self.elements = list()
+        self.invoice = default_invoice()
+        self.elements.append(
+            ttk.Button(
+                root,
+                text="Bitte Lieferschein wählen",
+                command=lambda: self.select_file(),
+            )
+        )
+        self.elements.append(tk.Label(root, text=f"{self.invoice}"))
+
+        for element in self.elements:
+            element.pack()
+
+        tk.Label(root, text='', pady=10).pack()
+        start_entry_label = tk.Label(root, text="Starte Eingabe ab:")
+        start_entry_label.pack()
+        self.start_entry = ttk.Entry(root,)
+        self.start_entry.insert(0, default_start_string())
+        self.start_entry.pack()
+        start_button = tk.Button(
+            root,
+            text="Start",
+            command=self.start,
+        )
+        self.elements.append(start_button)
+
+        start_button.pack(expand=True)
+
+    def select_file(self):
+        filetypes = (
+            ("Tabellen", "*.pdf"),
+            ("All files", "*.*"),
+        )
+
+        filename = fd.askopenfilename(
+            title="Bitte Lieferschein wählen",
+            initialdir=FILESDIR,
+            filetypes=filetypes,
+        )
+        self.invoice = filename
+        self.elements[1].config(text=f"{self.invoice}")
+
+    def start(self):
+        if os.path.exists(self.invoice):
+            try:
+                type_invoice(self.invoice, self.start_entry.get())
+            except LookupError as err:
+                tk.messagebox.showwarning(title=None, message=err.args[0])
+        else:
+            error_text = f"\"{self.invoice}\" ist kein gültiger Dateipfad."
+            tk.messagebox.showerror(title=None, message=error_text)
+
+    def destroy(self):
+        for element in self.elements + [self.start_entry]:
+            element.destroy()
 
 
 if __name__ == "__main__":

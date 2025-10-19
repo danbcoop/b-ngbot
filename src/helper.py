@@ -1,7 +1,10 @@
 import os
 
 from dbfpy3 import dbf
+
 from src.distributor import Dist
+from src.keys import focus_window, type_code
+from src.pdf_reader import read_pdf
 
 
 def ospath(path: str) -> str:
@@ -12,6 +15,15 @@ def ospath(path: str) -> str:
 
 
 FILESDIR = ospath("./files")
+
+
+def default_invoice() -> str:
+    ls = os.listdir(FILESDIR)
+    for filename in ls:
+        if ".pdf" in filename:
+            path = os.path.join(FILESDIR, filename)
+            return path
+    return "Bitte eine Lieferscheindatei wählen."
 
 
 def default_filename(dist: Dist) -> str:
@@ -90,3 +102,34 @@ def add_record(db, row, order):
             rec["SUPPLIER"] = "MOD"
 
     db.write(rec)
+
+
+def type_invoice(invoice_path: str, start: str):
+    focus_window("dosbox")
+
+    # Set new default
+    with open(ospath("bin/default_start"), "w") as fd:
+        fd.write(start)
+    items = read_pdf(invoice_path, start)
+    for item in items:
+        code = parse_code(item['Code'])
+        type_code(code)
+
+
+def default_start_string():
+    start_string = "PREVIEWS"
+    with open(ospath("bin/default_start"), "r") as fd:
+        start_string = fd.readline().strip()
+    return start_string
+
+
+def parse_code(code: str) -> str:
+    # Marvel
+    if len(code) > 10:
+        return prh_to_poc(code)
+    # Lunar
+    if code[0].isdigit():
+        return lunar_to_poc(code)
+    # Diamond
+    return code
+
