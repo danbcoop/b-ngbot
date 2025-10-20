@@ -6,6 +6,12 @@ from src.distributor import Dist
 from src.keys import focus_window, type_code
 from src.pdf_reader import read_pdf
 
+# def focus_window(a,b):
+#     pass
+#
+#
+# def type_code(code):
+#     pass
 
 def ospath(path: str) -> str:
     if os.name == "posix":

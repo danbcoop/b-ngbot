@@ -7,16 +7,23 @@ import numpy as np
 import pandas as pd
 
 from src.distributor import Dist, OrderList
-from src.helper import (FILESDIR, default_col_name, default_filename,
-                        default_invoice, default_start_string, ospath,
-                        type_invoice, write_to_dbf)
+from src.helper import (
+    FILESDIR,
+    default_col_name,
+    default_filename,
+    default_invoice,
+    default_start_string,
+    ospath,
+    type_invoice,
+    write_to_dbf,
+)
 
 
 class GUI:
     """GUI to interface the bot"""
 
     TITLE = "Bäng Bot 2.0"
-    GEOMETRY = "600x400"
+    GEOMETRY = "600x450"
     LOGO = ospath("./assets/bb_logo.png")
     ICON = ospath("./assets/bb_logo.ico")
     DIST_NAMES = [
@@ -85,8 +92,7 @@ class GUI:
         write_to_dbf(self.dists)
         for dist in self.dists:
             dist.to_excel()
-        tk.messagebox.showinfo(
-            title=None, message="Import erfolgreich abgeschlossen!")
+        tk.messagebox.showinfo(title=None, message="Import erfolgreich abgeschlossen!")
 
     def add_mg_codes(self):
         start = self.dists[0].orderlist.data.shape[0] + 1
@@ -139,17 +145,19 @@ class FilenameFrame:
     def __init__(self, root, dists):
         self.buttons = list()
         self.labels = list()
+        self.spaces = list()
         for dist in dists:
             self.buttons.append(
                 ttk.Button(
                     root,
-                    text=f"Wähle {dist.name}-Datei",
+                    text=f"Auswahl für {dist.name}-Datei ändern",
                     command=lambda d=dist: self.select_file(d),
                 )
             )
             self.labels.append(
                 tk.Label(root, text=f"{dist.name}: {default_filename(dist)}")
             )
+            self.spaces.append(tk.Label(root, text=""))
 
         start_button = tk.Button(
             root,
@@ -159,8 +167,9 @@ class FilenameFrame:
         self.buttons.append(start_button)
 
         for dist in dists:
-            self.labels[dist.id].pack(ipadx=10, pady=10, anchor="w")
+            self.labels[dist.id].pack(ipadx=10)
             self.buttons[dist.id].pack(ipadx=20)
+            self.spaces[dist.id].pack()
 
         start_button.pack(expand=True)
 
@@ -189,12 +198,11 @@ class FilenameFrame:
         root.frame.set("Cols")
 
     def destroy(self):
-        for element in self.buttons + self.labels:
+        for element in self.buttons + self.labels + self.spaces:
             element.destroy()
 
 
 class ColsFrame:
-
     def __init__(self, root, dist):
         self.col_options = list()
         self.option_labels = list()
@@ -206,8 +214,7 @@ class ColsFrame:
             selected_option = tk.StringVar(value=default_col_name(dist, col))
             self.option_vars.append(selected_option)
             self.col_options.append(
-                ttk.Combobox(root, textvariable=selected_option,
-                             state="readonly")
+                ttk.Combobox(root, textvariable=selected_option, state="readonly")
             )
             self.option_labels.append(tk.Label(root, text=f"{col}:"))
 
@@ -258,10 +265,12 @@ class TypeInFrame:
         for element in self.elements:
             element.pack()
 
-        tk.Label(root, text='', pady=10).pack()
+        tk.Label(root, text="", pady=10).pack()
         start_entry_label = tk.Label(root, text="Starte Eingabe ab:")
         start_entry_label.pack()
-        self.start_entry = ttk.Entry(root,)
+        self.start_entry = ttk.Entry(
+            root,
+        )
         self.start_entry.insert(0, default_start_string())
         self.start_entry.pack()
         start_button = tk.Button(
@@ -294,7 +303,7 @@ class TypeInFrame:
             except LookupError as err:
                 tk.messagebox.showwarning(title=None, message=err.args[0])
         else:
-            error_text = f"\"{self.invoice}\" ist kein gültiger Dateipfad."
+            error_text = f'"{self.invoice}" ist kein gültiger Dateipfad.'
             tk.messagebox.showerror(title=None, message=error_text)
 
     def destroy(self):
