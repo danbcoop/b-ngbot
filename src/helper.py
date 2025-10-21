@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 
 from dbfpy3 import dbf
 
@@ -138,4 +139,8 @@ def parse_code(code: str) -> str:
         return lunar_to_poc(code)
     # Diamond
     return code
+
+def prh_to_poc(code: str) -> str:
+    data = pd.read_csv("bin/mar_mg",dtype=str,delimiter=";")
+    return data.loc[data['mar'] == code]['mg'][0]
 
