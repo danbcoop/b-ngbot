@@ -15,10 +15,11 @@ from src.pdf_reader import read_pdf
 #     pass
 
 def ospath(path: str) -> str:
-    if os.name == "posix":
-        return path
-    else:  # Windows
-        return path.replace("/", "\\")
+    return os.path.normpath(path)
+    # if os.name == "posix":
+    #     return path
+    # else:  # Windows
+    #     return path.replace("/", "\\")
 
 
 FILESDIR = ospath("./files")
@@ -70,7 +71,7 @@ def lunar_to_poc(s: str) -> str:
 
 
 def write_to_dbf(orders):
-    with dbf.Dbf("ami.dbf", new=True) as db:
+    with dbf.Dbf(ospath("files/ami.dbf"), new=True) as db:
         db.add_field(
             ("C", "POCODE", 9),
             ("C", "TITLE", 50),
@@ -141,6 +142,6 @@ def parse_code(code: str) -> str:
     return code
 
 def prh_to_poc(code: str) -> str:
-    data = pd.read_csv("bin/mar_mg",dtype=str,delimiter=";")
+    data = pd.read_csv(ospath("bin/mar_mg"),dtype=str,delimiter=";")
     return data.loc[data['mar'] == code]['mg'][0]
 

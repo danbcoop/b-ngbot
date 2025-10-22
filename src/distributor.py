@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -109,12 +111,25 @@ class OrderList:
 
     def to_excel(self, filename):
         self.fix_price()
+        (*path, filename) = os.path.split(filename)
+        (filename, extension) = filename.split(".")
+        filename = os.path.join(path, filename)
         self.data.to_excel(
             f"{self.filename}_.xlsx",
             columns=self.print_order(),
             index=False,
         )
         if self.name == "PRH":
+            self.data.to_csv(
+                f"./bin/{self.name}",
+                sep=";",
+                lineterminator="\r\n",
+                header=False,
+                index=False,
+                decimal=",",
+                columns=["Qty", "MgCode", "Code", "Price", "Title", "Issue"],
+                mode="w",
+            )
             self.data.to_csv(
                 "./bin/mar_mg",
                 sep=";",
@@ -124,6 +139,17 @@ class OrderList:
                 decimal=",",
                 columns=["Qty", "MgCode", "Code", "Price", "Title", "Issue"],
                 mode="a",
+            )
+        if self.name == "DC":
+            self.data.to_csv(
+                f"./bin/{self.name}",
+                sep=";",
+                lineterminator="\r\n",
+                header=False,
+                index=False,
+                decimal=",",
+                columns=["Qty", "MgCode", "Code", "Price", "Title", "Issue"],
+                mode="w",
             )
 
     def get(self):

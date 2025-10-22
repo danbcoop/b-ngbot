@@ -5,17 +5,25 @@ from tkinter import ttk
 
 import numpy as np
 import pandas as pd
-from dbfpy3 import dbf
 
 from src.distributor import Dist, OrderList
-from src.helper import *
+from src.helper import (
+    FILESDIR,
+    default_col_name,
+    default_filename,
+    default_invoice,
+    default_start_string,
+    ospath,
+    type_invoice,
+    write_to_dbf,
+)
 
 
 class GUI:
     """GUI to interface the bot"""
 
     TITLE = "Bäng Bot 2.0"
-    GEOMETRY = "600x400"
+    GEOMETRY = "600x450"
     LOGO = ospath("./assets/bb_logo.png")
     ICON = ospath("./assets/bb_logo.ico")
     DIST_NAMES = [
@@ -28,78 +36,142 @@ class GUI:
         self.root = tk.Tk()
         root = self.root
 
-        root.title(f"{self.TITLE}")
-        root.geometry(f"{self.GEOMETRY}")
+        root.frame = tk.StringVar(root, name="frame")
+        root.frame.trace_add(mode=("write"), callback=self.update_frame)
 
-        self.home_buttons = list()
-        self.home_button_names = ["Import", "Export", "Lieferschein eingeben"]
-        self.select_buttons = list()
-        self.dists = list()
-        self.labels = list()
-
-        self.logo = tk.PhotoImage(file=f"{self.LOGO}")
-        self.logo_label = ttk.Label(root, image=self.logo, padding=5)
+        root.title(f"{GUI.TITLE}")
+        root.geometry(f"{GUI.GEOMETRY}")
+        self.logo = tk.PhotoImage(file=f"{GUI.LOGO}")
+        logo_label = ttk.Label(root, image=self.logo, padding=5)
+        logo_label.pack()
 
         if os.name == "posix":
             root.iconphoto(False, self.logo)
         else:  # Windows
-            root.iconbitmap(LOGO)
+            root.iconbitmap(GUI.ICON)
 
-    def run(self):
-        root = self.root
-
-        # There are three geometry managers: pack, grid, place
-        self.logo_label.pack()
-
-        for button_name in self.home_button_names:
-            self.home_buttons.append(
-                ttk.Button(
-                    root,
-                    text=button_name,
-                    command=lambda name=button_name: self.route_request(name),
-                )
-            )
-
-        for button in self.home_buttons:
-            button.pack(expand=True)
-
-        root.mainloop()
-
-    def show_import_frame(self):
-        root = self.root
-
-        # self.status = tk.Label(root, text="Wähle die Bestelllisten und drücke Start.")
-
+        self.dists = list()
+        self.dists_prepared = list()
         for i, dist_name in enumerate(self.DIST_NAMES):
             dist = Dist(dist_name, i)
             self.dists.append(dist)
-            self.select_buttons.append(
+
+    def run(self):
+        self.current = HomeFrame(self.root)
+
+        self.root.mainloop()
+
+    def update_frame(self, a, b, c):
+        self.current.destroy()
+        match self.root.frame.get():
+            case "Home":
+                self.current = HomeFrame(self.root)
+            case "Import":
+                self.current = FilenameFrame(self.root, self.dists)
+            case "Cols":
+                if not self.dists:
+                    self.dists = self.dists_prepared
+                    self.finish_import()
+                    self.root.quit()
+                else:
+                    if not self.dists_prepared:
+                        self.dists.reverse()
+                    dist = self.dists.pop()
+                    self.current = ColsFrame(self.root, dist)
+                    self.dists_prepared.append(dist)
+            case "Lieferschein eintippen":
+                self.current = TypeInFrame(self.root)
+
+            case _:
+                self.root.quit()
+
+    def finish_import(self):
+        self.add_mg_codes()
+        for dist in self.dists:
+            dist.process_import()
+        write_to_dbf(self.dists)
+        for dist in self.dists:
+            dist.to_excel()
+        tk.messagebox.showinfo(title=None, message="Import erfolgreich abgeschlossen!")
+
+    def add_mg_codes(self):
+        start = self.dists[0].orderlist.data.shape[0] + 1
+        end = start + self.dists[1].orderlist.data.shape[0]
+        mgcodes = list()
+        for i in np.arange(start, end):
+            mgcodes.append(f"{Dist.DATE}{i:04}")
+
+        self.dists[1].orderlist.data = pd.concat(
+            [
+                self.dists[1].orderlist.data,
+                pd.DataFrame(mgcodes, columns=["MgCode"]),
+            ],
+            axis=1,
+        )
+        start = end + 1
+        end = start + self.dists[2].orderlist.data.shape[0]
+        mgcodes = list()
+        for i in np.arange(start, end):
+            mgcodes.append(f"{Dist.DATE}{i:04}")
+
+        self.dists[2].orderlist.data = pd.concat(
+            [
+                self.dists[2].orderlist.data,
+                pd.DataFrame(mgcodes, columns=["MgCode"]),
+            ],
+            axis=1,
+        )
+
+
+class HomeFrame:
+    def __init__(self, root):
+        self.buttons = list()
+
+        for button_text in ["Import", "Export", "Lieferschein eintippen"]:
+            button = ttk.Button(
+                root,
+                text=button_text,
+                command=lambda choice=button_text: root.frame.set(choice),
+            )
+            button.pack(expand=True)
+            self.buttons.append(button)
+
+    def destroy(self):
+        for button in self.buttons:
+            button.destroy()
+
+
+class FilenameFrame:
+    def __init__(self, root, dists):
+        self.buttons = list()
+        self.labels = list()
+        self.spaces = list()
+        for dist in dists:
+            self.buttons.append(
                 ttk.Button(
                     root,
-                    text=f"Wähle {dist_name}-Datei",
+                    text=f"Auswahl für {dist.name}-Datei ändern",
                     command=lambda d=dist: self.select_file(d),
                 )
             )
             self.labels.append(
-                tk.Label(root, text=f"{dist_name}: {default_filename(dist)}")
+                tk.Label(root, text=f"{dist.name}: {default_filename(dist)}")
             )
+            self.spaces.append(tk.Label(root, text=""))
 
-        self.start_button = tk.Button(
+        start_button = tk.Button(
             root,
             text="Weiter",
-            command=self.import_order_files,
+            command=lambda: self.import_selection(root, dists),
         )
+        self.buttons.append(start_button)
 
-        for dist in self.dists:
-            self.labels[dist.id].pack()
-            self.select_buttons[dist.id].pack(ipadx=20)
+        for dist in dists:
+            self.labels[dist.id].pack(ipadx=10)
+            self.buttons[dist.id].pack(ipadx=20)
+            self.spaces[dist.id].pack()
 
-        self.start_button.pack(expand=True)
-        # self.status.pack()
-        root.mainloop()
-
-    def show_export_frame(self):
-        pass
+        start_button.pack(expand=True)
 
     def select_file(self, dist):
         filetypes = (
@@ -115,44 +187,27 @@ class GUI:
         dist.filename = filename
         self.labels[dist.id].config(text=f"{dist.name}: {filename}")
 
-    def route_request(self, request):
-        match request:
-            case "Import":
-                for button in self.home_buttons:
-                    button.forget()
-                self.show_import_frame()
-            case "Export":
-                for button in self.home_buttons:
-                    button.forget()
-                self.show_export_frame()
-
-    def import_order_files(self):
-        for dist in self.dists:
+    def import_selection(self, root, dists):
+        for dist in dists:
             dist.load()
             if dist.orderlist.empty:
                 error_text = f'"{dist.filename}" konnte nicht geöffnet werden.'
                 tk.messagebox.showerror(title=None, message=error_text)
-                self.status.config(text=error_text)
+                root.frame.set("Import")
                 return
-        self._import_order_files()
+        root.frame.set("Cols")
 
-    def _import_order_files(self):
-        root = self.root
+    def destroy(self):
+        for element in self.buttons + self.labels + self.spaces:
+            element.destroy()
 
-        # status = tk.Label(root, text="Wähle Importdateien und drücke Start.")
 
-        for button in self.select_buttons:
-            button.destroy()
-
-        for label in self.labels:
-            label.destroy()
-
-        self.start_button.forget()
+class ColsFrame:
+    def __init__(self, root, dist):
         self.col_options = list()
         self.option_labels = list()
         self.option_vars = list()
 
-        dist = self.dists[0]
         options = dist.orderlist.cols()
 
         for col in OrderList.COLUMN_NAMES:
@@ -169,170 +224,91 @@ class GUI:
             self.option_labels[i].pack()
             self.col_options[i].pack()
 
-        self.start_button.config(command=lambda d=dist: self.next_frame(d))
-        self.start_button.pack(expand=True)
+        cont_button = ttk.Button(
+            root,
+            text="Weiter",
+            command=lambda: self.cont(dist, root.frame),
+        )
+        self.option_labels.append(cont_button)
+        cont_button.pack(expand=True)
 
-        # self.dists[0].orderlist.reduce(["Code", "Retail", "Title", "IssueNumber"])
-        # # self.dists[2].to_excel()
-        # # x=self.dists[2].orderlist.get()
-        # # static NDEX=0
-        # # x=x.map(lambda _: INDEX+1)
-        #
-        # self.dists[0].orderlist.data.replace({"IssueNumber": np.nan}, 1, inplace=True)
-        # self.dists[0].orderlist.data.dropna(inplace=True)
-        # self.dists[0].orderlist.data.rename(
-        #     columns={"IssueNumber": "Issue", "Retail": "Price"}, inplace=True
-        # )
-        # for i, row in self.dists[0].orderlist.data.iterrows():
-        #     code = row.at["Code"]
-        #     print(row)
-        #     row.at["Code"] = remove_year(f"{code[4:6]}{code[0:4]}{code[6:]}")
-        # # for i, row in self.dists[0].orderlist.data.iterrows():
-        # #     print(row.at["Code"])
-        #
-        # # self.dists[0].to_excel()
-        # options = self.dists[2].orderlist.cols()
-        # selected_option = tk.StringVar(value=options[2])
-        #
-        # option_menu = tk.OptionMenu(
-        #     root,
-        #     selected_option,
-        #     *options,
-        #     command=lambda option: show_selection(selected_option),
-        # )
-        # option_menu.pack()
-        # # self.start_button.config(text="Starte Import", command=lambda: print("TODO"))
+    def destroy(self):
+        for element in self.col_options + self.option_labels:
+            element.destroy()
 
-        root.mainloop()
-
-    def next_frame(self, dist):
-        root = self.root
-        self.start_button.forget()
+    def cont(self, dist, frame):
         self.set_col_names(dist)
-        try:
-            dist = self.dists[dist.id + 1]
-        except Exception:
-            # Add MgCode
-            self.start_button.destroy()
-            start = self.dists[0].orderlist.data.shape[0] + 1
-            end = start + self.dists[1].orderlist.data.shape[0]
-            mgcodes = list()
-            for i in np.arange(start, end):
-                mgcodes.append(f"{Dist.DATE}{i:04}")
-
-            self.dists[1].orderlist.data = pd.concat(
-                [
-                    self.dists[1].orderlist.data,
-                    pd.DataFrame(mgcodes, columns=["MgCode"]),
-                ],
-                axis=1,
-            )
-            start = end + 1
-            end = start + self.dists[2].orderlist.data.shape[0]
-            mgcodes = list()
-            for i in np.arange(start, end):
-                mgcodes.append(f"{Dist.DATE}{i:04}")
-
-            self.dists[2].orderlist.data = pd.concat(
-                [
-                    self.dists[2].orderlist.data,
-                    pd.DataFrame(mgcodes, columns=["MgCode"]),
-                ],
-                axis=1,
-            )
-            for dist in self.dists:
-                dist.process_import()
-            write_to_dbf(self.dists)
-            for dist in self.dists:
-                dist.to_excel()
-            tk.messagebox.showinfo(
-                title=None, message="Import erfolgreich abgeschlossen!"
-            )
-            root.destroy()
-            return
-
-        options = dist.orderlist.cols()
-
-        for col in OrderList.COLUMN_NAMES:
-            selected_option = tk.StringVar(value=default_col_name(dist, col))
-            self.option_vars.append(selected_option)
-            self.col_options.append(
-                ttk.Combobox(root, textvariable=selected_option, state="readonly")
-            )
-            self.option_labels.append(tk.Label(root, text=f"{col}:"))
-
-        for col in dist.colums():
-            i = OrderList.COLUMN_NAMES.index(col)
-            self.col_options[i]["values"] = options
-            self.col_options[i].set(default_col_name(dist, col))
-            self.option_labels[i].pack()
-            self.col_options[i].pack()
-
-        self.start_button.config(command=lambda d=dist: self.next_frame(d))
-        self.start_button.pack(expand=True)
+        frame.set("Cols")
 
     def set_col_names(self, dist):
         new_names = dict()
         for col in dist.colums():
             i = OrderList.COLUMN_NAMES.index(col)
             new_names[self.option_vars[i].get()] = col
-            self.col_options[i].forget()
-            self.option_labels[i].forget()
 
         dist.rename_and_drop(new_names)
 
 
-def code_remove_year(s: str) -> str:
-    # 1025DC0050 -> 105DC005
-    return s[:2] + s[3:]
-
-
-def code_adjust_lunar(s: str) -> str:
-    if len(s) > 0:
-        s =code_remove_year(s)
-    # 105DC005 -> DC105005
-    return s[3:5] + s[:3] + s[5:]
-
-def write_to_dbf(orders):
-    with dbf.Dbf("ami.dbf", new=True) as db:
-        db.add_field(
-            ("C", "POCODE", 9),
-            ("C", "TITLE", 50),
-            ("C", "ISSUE", 10),
-            ("N", "PRICE", 9, 2),
-            ("C", "SUPPLIER", 3),
-            ("N", "GESAMTBEST", 5, 0),
-            ("N", "TEMPORARY", 3, 0),
-            ("C", "DISCCODE", 2),
+class TypeInFrame:
+    def __init__(self, root):
+        self.elements = list()
+        self.invoice = default_invoice()
+        self.elements.append(
+            ttk.Button(
+                root,
+                text="Bitte Lieferschein wählen",
+                command=lambda: self.select_file(),
+            )
         )
-        for order in orders:
-            for i, row in order.orderlist.data.iterrows():
-                add_record(db, row, order.name)
+        self.elements.append(tk.Label(root, text=f"{self.invoice}"))
 
+        for element in self.elements:
+            element.pack()
 
-def add_record(db, row, order):
-    rec = db.new()
-    match order:
-        case "DIAMOND":
-            rec["POCODE"] = row.at["Code"]
-            rec["TITLE"] = row.at["Title"]
-            rec["ISSUE"] = row.at["Issue"]
-            rec["PRICE"] = float(row.at["Price"])
-            rec["SUPPLIER"] = "DIA"
-        case "DC":
-            rec[b"POCODE"] = code_adjust_lunar(row.at["Code"])
-            rec[b"TITLE"] = row.at["Title"]
-            rec[b"ISSUE"] = row.at["Issue"]
-            rec[b"PRICE"] = float(row.at["Price"])
-            rec[b"SUPPLIER"] = "PEP"
-        case "PRH":
-            rec["POCODE"] = row.at["MgCode"]
-            rec["TITLE"] = row.at["Title"]
-            rec["ISSUE"] = row.at["Issue"]
-            rec["PRICE"] = float(row.at["Price"])
-            rec["SUPPLIER"] = "MOD"
+        tk.Label(root, text="", pady=10).pack()
+        start_entry_label = tk.Label(root, text="Starte Eingabe ab:")
+        start_entry_label.pack()
+        self.start_entry = ttk.Entry(
+            root,
+        )
+        self.start_entry.insert(0, default_start_string())
+        self.start_entry.pack()
+        start_button = tk.Button(
+            root,
+            text="Start",
+            command=self.start,
+        )
+        self.elements.append(start_button)
 
-    db.write(rec)
+        start_button.pack(expand=True)
+
+    def select_file(self):
+        filetypes = (
+            ("Tabellen", "*.pdf"),
+            ("All files", "*.*"),
+        )
+
+        filename = fd.askopenfilename(
+            title="Bitte Lieferschein wählen",
+            initialdir=FILESDIR,
+            filetypes=filetypes,
+        )
+        self.invoice = filename
+        self.elements[1].config(text=f"{self.invoice}")
+
+    def start(self):
+        if os.path.isfile(self.invoice):
+            try:
+                type_invoice(self.invoice, self.start_entry.get())
+            except LookupError as err:
+                tk.messagebox.showwarning(title=None, message=err.args[0])
+        else:
+            error_text = f'"{self.invoice}" ist kein gültiger Dateipfad.'
+            tk.messagebox.showerror(title=None, message=error_text)
+
+    def destroy(self):
+        for element in self.elements + [self.start_entry]:
+            element.destroy()
 
 
 if __name__ == "__main__":
