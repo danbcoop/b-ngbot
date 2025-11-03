@@ -82,6 +82,8 @@ class GUI:
             case "Lieferschein eintippen":
                 self.current = TypeInFrame(self.root)
 
+            # case "Export":
+            #     self.current = ExportFrame(self.root, self.dists)
             case _:
                 self.root.quit()
 
@@ -200,6 +202,17 @@ class FilenameFrame:
     def destroy(self):
         for element in self.buttons + self.labels + self.spaces:
             element.destroy()
+
+
+class ExportFrame:
+    def __init__(self, root, dists):
+        pass
+
+        # data = pd.read_csv(ospath("bin/PRH"),dtype=str,delimiter=";")
+        # fn = os.path.join(FILESDIR, "MOD.DBF")
+        # with dbf.Dbf(fn) as db:
+        #     for record in db:
+        #         data.loc[data['code'] == record['POCODE']]['Qty'][0] = record['Menge']
 
 
 class ColsFrame:

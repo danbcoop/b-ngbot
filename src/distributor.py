@@ -3,6 +3,8 @@ import os
 import numpy as np
 import pandas as pd
 
+from src.adjust_column_width import adjust_column_width 
+
 CROSSOUT = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 
@@ -26,10 +28,11 @@ class Dist:
         self.orderlist = OrderList(self.filename, self.name)
 
     def rename_and_drop(self, new_names):
-        self.orderlist.rename_and_drop(new_names, self.name)
         if self.name == "DIAMOND":
-            date = self.orderlist.data.at[0, "Code"]
+            date = self.orderlist.data.at[0, "DIAMD_NO"]
             Dist.DATE = date[:5]
+        self.orderlist.rename_and_drop(new_names, self.name)
+
 
     def to_excel(self):
         self.orderlist.to_excel(self.filename)
@@ -113,18 +116,20 @@ class OrderList:
         self.fix_price()
         (*path, filename) = os.path.split(filename)
         (filename, extension) = filename.split(".")
-        filename = os.path.join(path, filename)
+        filename = os.path.join(*path, filename)
         self.data.to_excel(
             f"{self.filename}_.xlsx",
             columns=self.print_order(),
             index=False,
         )
+        adjust_column_width(f"{self.filename}_.xlsx")
+
         if self.name == "PRH":
             self.data.to_csv(
                 f"./bin/{self.name}",
                 sep=";",
                 lineterminator="\r\n",
-                header=False,
+                header=True,
                 index=False,
                 decimal=",",
                 columns=["Qty", "MgCode", "Code", "Price", "Title", "Issue"],
@@ -145,7 +150,7 @@ class OrderList:
                 f"./bin/{self.name}",
                 sep=";",
                 lineterminator="\r\n",
-                header=False,
+                header=True,
                 index=False,
                 decimal=",",
                 columns=["Qty", "MgCode", "Code", "Price", "Title", "Issue"],

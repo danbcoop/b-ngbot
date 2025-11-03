@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-from dbfpy3 import dbf
+from dbf import dbf
 
 from src.distributor import Dist
 from src.keys import focus_window, type_code
