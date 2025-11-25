@@ -1,8 +1,12 @@
 import time
 
 import keyboard
-# pywin32
 import win32gui
+
+DELAY = 0.25
+EINGABE = (500, 380)
+CONFIRMJ = (565, 380)
+CONFIRMC = (485, 380)
 
 
 class WindowFocusError(LookupError):
@@ -21,6 +25,7 @@ def focus_window(window_name: str):
     window_handle = 0
     for hwnd, title in winlist:
         if window_name in title.lower():
+            print(title.lower())
             window_handle = hwnd
             break
     if not window_handle:
@@ -29,12 +34,35 @@ def focus_window(window_name: str):
                 window_name} gefunden werden!"
         )
     else:
+        x0, y0, x1, y1 = win32gui.GetWindowRect(window_handle)
+        global EINGABE
+        global CONFIRMJ
+        EINGABE = (EINGABE[0] + x0, EINGABE[1] + y0)
+        CONFIRMJ = (CONFIRMJ[0] + x0, CONFIRMJ[1] + y0)
+        print(EINGABE)
         win32gui.SetForegroundWindow(window_handle)
-    # window = [(hwnd, title) for hwnd, title in winlist if window_name in title.lower()]
-    # # just grab the first window that matches
-    # window = window[0]
-    # # use the window handle to set focus
-    # win32gui.SetForegroundWindow(window[0])
+
+
+def type_code(code: str):
+    if check_pixel(*EINGABE):
+        for letter in code:
+            keyboard.press_and_release(letter)
+
+    time.sleep(DELAY)
+    if check_pixel(*CONFIRMJ):
+        keyboard.press_and_release("J")
+        keyboard.press_and_release("c")
+    else:
+        for i in range(9):
+            keyboard.send("backspace")
+
+
+def check_pixel(x, y):
+    TARGET_COLOR = 11184810
+    return (
+        win32gui.GetPixel(win32gui.GetDC(win32gui.GetActiveWindow()), x, y)
+        == TARGET_COLOR
+    )
 
 
 if __name__ == "__main__":
@@ -43,7 +71,6 @@ if __name__ == "__main__":
     except WindowFocusError as err:
         errortext = err.args[0]
 
-    DELAY = 0.02
     keyboard.write("code")
     time.sleep(DELAY)
     keyboard.write("J")
