@@ -269,7 +269,7 @@ class DbfCharacterField(DbfField):
 
     def encode(self, value, encoding=locale.getpreferredencoding()):
         """Return raw data string encoded from a ``value``."""
-        value = str(value).encode(encoding, errors='replace')
+        value = str(value).encode(encoding, errors='ignore')
 
         return value[: self.length].ljust(self.length)
 
