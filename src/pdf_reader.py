@@ -3,15 +3,17 @@ from pypdf import PdfReader
 
 def read_pdf(filename: str, start_string: str) -> list():
     reader = PdfReader(filename)
+    found_beginning = False
     for page in reader.pages:
         buf = page.extract_text()
-        found = False
         items = list()
         for line in buf.split("\n"):
 
             if start_string in line:
-                found = True
-            if not found:
+                found_beginning = True
+            elif True:
+                pass
+            if not found_beginning:
                 continue
             try:
                 item = dict()

@@ -49,6 +49,9 @@ def type_code(code: str):
             keyboard.press_and_release(letter)
 
     time.sleep(DELAY)
+    for x in range(500,640):
+        print(f"{x}: {win32gui.GetPixel(win32gui.GetDC(win32gui.GetActiveWindow()), x, 410)}")
+    return
     if check_pixel(*CONFIRMJ):
         keyboard.press_and_release("J")
         keyboard.press_and_release("c")
