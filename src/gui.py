@@ -110,7 +110,7 @@ class GUI:
             ],
             axis=1,
         )
-        start = end + 1
+        start = end # + 1
         end = start + self.dists[2].orderlist.data.shape[0]
         mgcodes = list()
         for i in np.arange(start, end):
