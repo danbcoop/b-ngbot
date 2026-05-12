@@ -10,19 +10,20 @@ __version__ = "$Revision: 1.15 $"[11:-2]
 __date__ = "$Date: 2010/12/14 11:04:49 $"[7:-2]
 
 # field classes added at the end of the module
-__all__ = ['DbfField', 'DbfFields']
+__all__ = ["DbfField", "DbfFields"]
 
 import datetime
-import struct
 import locale
+import struct
 
-from .memo import MemoData
 from . import utils
 from .code_page import CodePage
+from .memo import MemoData
 
 
 class DbfFields:
     """All DbfField implementation."""
+
     _fields = {}
 
     @classmethod
@@ -36,7 +37,9 @@ class DbfFields:
 
         """
         if field_class.type_code is None:
-            raise ValueError("type code ({}) isn't defined".format(field_class.type_code))
+            raise ValueError(
+                "type code ({}) isn't defined".format(field_class.type_code)
+            )
 
         key = field_class.type_code.upper()
         cls._fields[key] = field_class
@@ -58,7 +61,7 @@ class DbfFields:
             type_code = type_code.encode()
 
         if not isinstance(type_code, bytes) or type_code.upper() not in cls._fields:
-            raise KeyError('type code ({}) not support'.format(type_code))
+            raise KeyError("type code ({}) not support".format(type_code))
 
         return cls._fields[type_code.upper()]
 
@@ -75,12 +78,11 @@ class DbfFields:
 
         """
         if not isinstance(string, bytes) or len(string) != 32:
-            raise ValueError('String ({}) is not a 32 length bytes'.format(string))
+            raise ValueError("String ({}) is not a 32 length bytes".format(string))
 
-        (
-            name, type_code, start, length,
-            decimal_count, flag, ai_next, ai_step
-        ) = struct.unpack('< 11s c I 3B I B', string[:24])
+        name, type_code, start, length, decimal_count, flag, ai_next, ai_step = (
+            struct.unpack("< 11s c I 3B I B", string[:24])
+        )
 
         return cls.get(type_code)(
             utils.unzfill(name),
@@ -113,8 +115,14 @@ class DbfField(object):
     """
 
     __slots__ = (
-        "_name", "start", "length", "decimal_count",
-        "flag", "ai_next", "ai_step", "ignore_errors"
+        "_name",
+        "start",
+        "length",
+        "decimal_count",
+        "flag",
+        "ai_next",
+        "ai_step",
+        "ignore_errors",
     )
 
     # field type. for more information about fields types visit
@@ -134,8 +142,15 @@ class DbfField(object):
     is_memo = False
 
     def __init__(
-        self, name, length=None, decimal_count=0, start=None,
-        flag=0, ai_next=0, ai_step=0, ignore_errors=False,
+        self,
+        name,
+        length=None,
+        decimal_count=0,
+        start=None,
+        flag=0,
+        ai_next=0,
+        ai_step=0,
+        ignore_errors=False,
     ):
         """Initialize instance."""
 
@@ -180,7 +195,7 @@ class DbfField(object):
     @name.setter
     def name(self, name):
         if not isinstance(name, bytes):
-            raise TypeError('name must be bytes')
+            raise TypeError("name must be bytes")
 
         if len(name) > 20:
             raise ValueError("field name '%s' must less than 20 bytes" % name)
@@ -195,7 +210,7 @@ class DbfField(object):
             definition of this field.
         """
         return struct.pack(
-            '< 11s c I 3B I B 8s',
+            "< 11s c I 3B I B 8s",
             self.name,
             self.type_code,
             self.start,
@@ -204,7 +219,7 @@ class DbfField(object):
             self.flag,
             self.ai_next,
             self.ai_step,
-            b'\x00' * 8,
+            b"\x00" * 8,
         )
 
     def __hash__(self):
@@ -212,7 +227,10 @@ class DbfField(object):
 
     def __str__(self):
         return "%-10s %1s %3d %3d" % (
-            self.name, self.type_code, self.length, self.decimal_count
+            self.name,
+            self.type_code,
+            self.length,
+            self.decimal_count,
         )
 
     def decode(self, value, encoding=None):
@@ -233,13 +251,14 @@ class DbfField(object):
         raise NotImplementedError
 
 
-## real classes
+# real classes
+
 
 class DbfCharacterField(DbfField):
     """Definition of the character field."""
 
-    type_code = b'C'
-    default_value = ''
+    type_code = b"C"
+    default_value = ""
 
     def decode(self, value, encoding=locale.getpreferredencoding()):
         """Return string object.
@@ -250,14 +269,15 @@ class DbfCharacterField(DbfField):
 
     def encode(self, value, encoding=locale.getpreferredencoding()):
         """Return raw data string encoded from a ``value``."""
-        value = str(value).encode(encoding)
-        return value[:self.length].ljust(self.length)
+        value = str(value).encode(encoding, errors='replace')
+
+        return value[: self.length].ljust(self.length)
 
 
 class DbfNumericField(DbfField):
     """Definition of the numeric field."""
 
-    type_code = b'N'
+    type_code = b"N"
     default_value = 0.0
 
     def decode(self, value, encoding=locale.getpreferredencoding()):
@@ -273,15 +293,15 @@ class DbfNumericField(DbfField):
 
     def encode(self, value, encoding=locale.getpreferredencoding()):
         """Return string containing encoded ``value``."""
-        string = ("%*.*f" % (self.length, self.decimal_count, value))
+        string = "%*.*f" % (self.length, self.decimal_count, value)
         if len(string) > self.length:
             if not (0 <= string.find(".") <= self.length):
                 raise ValueError(
-                    "[%s] Numeric overflow: %s (field length: %i)" %
-                    (self.name, string, self.length)
+                    "[%s] Numeric overflow: %s (field length: %i)"
+                    % (self.name, string, self.length)
                 )
 
-            string = string[:self.length]
+            string = string[: self.length]
 
         return string.encode(encoding)
 
@@ -289,13 +309,13 @@ class DbfNumericField(DbfField):
 class DbfFloatField(DbfNumericField):
     """Definition of the float field - same as numeric."""
 
-    type_code = b'F'
+    type_code = b"F"
 
 
 class DbfIntegerField(DbfField):
     """Definition of the integer field."""
 
-    type_code = b'I'
+    type_code = b"I"
     fixed_length = 4
     default_value = 0
 
@@ -311,7 +331,7 @@ class DbfIntegerField(DbfField):
 class DbfCurrencyField(DbfField):
     """Definition of the currency field."""
 
-    type_code = b'Y'
+    type_code = b"Y"
     fixed_length = 8
     default_value = 0.0
 
@@ -325,7 +345,7 @@ class DbfCurrencyField(DbfField):
 
     def decode(self, value, encoding=None):
         """Return float number decoded from ``value``."""
-        return struct.unpack("<q", value)[0] / 10000.
+        return struct.unpack("<q", value)[0] / 10000.0
 
     def encode(self, value, encoding=None):
         """Return string containing encoded ``value``."""
@@ -335,7 +355,7 @@ class DbfCurrencyField(DbfField):
 class DbfLogicalField(DbfField):
     """Definition of the logical field."""
 
-    type_code = b'L'
+    type_code = b"L"
     default_value = -1
     fixed_length = 1
 
@@ -368,7 +388,7 @@ class DbfLogicalField(DbfField):
 class DbfGeneralField(DbfField):
     """Definition of the general (OLE object) field."""
 
-    type_code = b'G'
+    type_code = b"G"
     # MemoData type for strings written to the memo file
     memoType = MemoData.TYPE_OBJECT
     default_value = b"\x00" * 4
@@ -383,7 +403,7 @@ class DbfGeneralField(DbfField):
         if _block:
             return self.file.read(_block)
         else:
-            return MemoData(b'', self.memoType)
+            return MemoData(b"", self.memoType)
 
     def encode(self, value, encoding=None):
         """Return raw data string encoded from a ``value``.
@@ -391,12 +411,7 @@ class DbfGeneralField(DbfField):
         Note: this is an internal method.
         """
         if value:
-            return struct.pack(
-                "<L",
-                self.file.write(
-                    MemoData(value, self.memoType)
-                )
-            )
+            return struct.pack("<L", self.file.write(MemoData(value, self.memoType)))
         else:
             return self.default_value
 
@@ -404,7 +419,7 @@ class DbfGeneralField(DbfField):
 class DbfMemoField(DbfGeneralField):
     """Definition of the memo field."""
 
-    type_code = b'M'
+    type_code = b"M"
     memoType = MemoData.TYPE_MEMO
 
     def decode(self, value, encoding=locale.getpreferredencoding()):
@@ -425,14 +440,14 @@ class DbfPictureField(DbfGeneralField):
     """Definition of the picture field."""
 
     # not implement yet
-    type_code = b'P'
+    type_code = b"P"
     memoType = MemoData.TYPE_PICTURE
 
 
 class DbfDateField(DbfField):
     """Definition of the date field."""
 
-    type_code = b'D'
+    type_code = b"D"
 
     @utils.classproperty
     def default_value(cls):
@@ -470,7 +485,7 @@ class DbfDateTimeField(DbfField):
     # a difference between JDN (Julian Day Number)
     # and GDN (Gregorian Day Number). note, that GDN < JDN
     JDN_GDN_DIFF = 1721425
-    type_code = b'T'
+    type_code = b"T"
 
     @utils.classproperty
     def default_value(cls):
@@ -500,29 +515,30 @@ class DbfDateTimeField(DbfField):
             value = utils.get_date_time(value)
             # LE byteorder
             string = struct.pack(
-                "<2I", value.toordinal() + self.JDN_GDN_DIFF,
-                (value.hour * 3600 + value.minute * 60 + value.second) * 1000
+                "<2I",
+                value.toordinal() + self.JDN_GDN_DIFF,
+                (value.hour * 3600 + value.minute * 60 + value.second) * 1000,
             )
         else:
             string = b"\x00" * self.length
 
         if len(string) != self.length:
-            raise ValueError('encoded string length does not match ({})'.format(string))
+            raise ValueError("encoded string length does not match ({})".format(string))
 
         return string
 
 
-## register generic types
-for (type_code, klass) in list(globals().items()):
+# register generic types
+for type_code, klass in list(globals().items()):
     if (
-        isinstance(klass, type) and
-        issubclass(klass, DbfField) and
-        klass is not DbfField
+        isinstance(klass, type)
+        and issubclass(klass, DbfField)
+        and klass is not DbfField
     ):
         # validate class
         if klass.type_code is None or klass.default_value is None:
             raise NotImplementedError(
-                '{} type_code and default_value must be overridden'.format(klass)
+                "{} type_code and default_value must be overridden".format(klass)
             )
         DbfFields.register(klass)
         __all__.append(klass.__name__)
