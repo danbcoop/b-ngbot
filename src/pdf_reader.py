@@ -11,8 +11,6 @@ def read_pdf(filename: str, start_string: str) -> list():
 
             if start_string in line:
                 found_beginning = True
-            elif True:
-                pass
             if not found_beginning:
                 continue
             try:
