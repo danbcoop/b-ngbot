@@ -1,8 +1,8 @@
 import os
+
 import pandas as pd
 
 from dbf import dbf
-
 from src.distributor import Dist
 from src.keys import focus_window, type_code
 from src.pdf_reader import read_pdf
@@ -13,6 +13,7 @@ from src.pdf_reader import read_pdf
 #
 # def type_code(code):
 #     pass
+
 
 def ospath(path: str) -> str:
     return os.path.normpath(path)
@@ -72,6 +73,11 @@ def lunar_to_poc(s: str) -> str:
     return s[4:6] + s[:4] + s[6:]
 
 
+def poc_to_lunar(s: str) -> str:
+    # DC105005 -> DC005
+    return s[:2] + s[-3:]
+
+
 def write_to_dbf(orders):
     with dbf.Dbf(ospath("files/ami.dbf"), new=True) as db:
         db.add_field(
@@ -122,7 +128,7 @@ def type_invoice(invoice_path: str, start: str):
         fd.write(start)
     items = read_pdf(invoice_path, start)
     for item in items:
-        code = parse_code(item['Code'])
+        code = parse_code(item["Code"])
         if code:
             type_code(code)
 
@@ -145,11 +151,12 @@ def parse_code(code: str) -> str:
     # Diamond
     return code
 
+
 def prh_to_poc(code: str) -> str:
-    data = pd.read_csv(ospath("bin/mar_mg"),dtype=str,delimiter=";")
-    poc = ''
+    data = pd.read_csv(ospath("bin/mar_mg"), dtype=str, delimiter=";")
+    poc = ""
     try:
-        poc = data.loc[data['mar'] == code]['mg'].values[0]
+        poc = data.loc[data["mar"] == code]["mg"].values[0]
     except:
         pass
     return poc
