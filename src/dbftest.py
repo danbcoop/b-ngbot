@@ -1,6 +1,10 @@
-"""
 from dbfpy3 import dbf
 
+
+def read_dbf(fn: str):
+    with dbf.Dbf(fn) as db:
+        for record in db:
+            print(record["POCODE"], record["GESMTBEST"])
 
 
 def write_to_dbf(order: OrderList, mode="a"):
@@ -48,4 +52,7 @@ def add_record(db, row, order):
             rec["SUPPLIER"] = "MOD"
 
     db.write(rec)
-    """
+
+
+if __name__ == "__main__":
+    read_dbf("PEP.DBF")
