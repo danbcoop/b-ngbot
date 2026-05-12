@@ -1,6 +1,4 @@
-"""DBF record definition.
-
-"""
+"""DBF record definition."""
 
 __version__ = "$Revision: 1.7 $"[11:-2]
 __date__ = "$Date: 2007/02/11 09:05:49 $"[7:-2]
@@ -8,9 +6,10 @@ __date__ = "$Date: 2007/02/11 09:05:49 $"[7:-2]
 __all__ = ["DbfRecord"]
 
 import io
-from .header import DbfHeader
-from . import utils
 import locale
+
+from . import utils
+from .header import DbfHeader
 
 
 class DbfRecord(object):
@@ -26,7 +25,7 @@ class DbfRecord(object):
 
     __slots__ = "dbf", "header", "_index", "deleted", "fields"
 
-    ## creation and initialization
+    # creation and initialization
 
     def __init__(self, header, index=None, deleted=False, data=None):
         """Instance initialization.
@@ -47,7 +46,7 @@ class DbfRecord(object):
 
         """
         if not isinstance(header, DbfHeader):
-            raise TypeError('header is not a %s' % DbfHeader)
+            raise TypeError("header is not a %s" % DbfHeader)
 
         self.header = header
         # for IDE inspection
@@ -56,7 +55,7 @@ class DbfRecord(object):
         self.deleted = deleted
         if data is None:
             self.fields = [field.default_value for field in header.fields]
-        elif hasattr(data, '__iter__'):
+        elif hasattr(data, "__iter__"):
             self.fields = list(data)
         elif isinstance(data, (io.IOBase, bytes)):
             self.read(data)
@@ -67,10 +66,9 @@ class DbfRecord(object):
     def position(self):
         """File position of record"""
         if self.index is None:
-            raise IndexError('Record index is None')
+            raise IndexError("Record index is None")
 
-        return (self.header.header_length +
-                self.index * self.header.record_length)
+        return self.header.header_length + self.index * self.header.record_length
 
     @property
     def index(self):
@@ -98,10 +96,13 @@ class DbfRecord(object):
     def decode(self, string):
         """Return record read from the string."""
         try:
-            return [field.decode(
-                string[field.start:field.start + field.length],
-                encoding=self.header.code_page.encoding
-            ) for field in self.header.fields]
+            return [
+                field.decode(
+                    string[field.start : field.start + field.length],
+                    encoding=self.header.code_page.encoding,
+                )
+                for field in self.header.fields
+            ]
         except:
             if self.header.ignore_errors:
                 return utils.INVALID_VALUE
@@ -113,13 +114,13 @@ class DbfRecord(object):
         if isinstance(string, io.IOBase):
             stream = string
             if not stream.readable():
-                raise OSError('Stream is not readable')
+                raise OSError("Stream is not readable")
             # FIXME: validate file position
             stream.seek(self.position)
             string = stream.read(self.header.record_length)
-        if string[0:1] not in b' *':
-            raise ValueError('Record deleted flag error ({})', string[0])
-        self.deleted = (string[0:1] == b'*')
+        if string[0:1] not in b" *":
+            raise ValueError("Record deleted flag error ({})", string[0])
+        self.deleted = string[0:1] == b"*"
         self.fields = self.decode(string)
         return self
 
@@ -131,9 +132,7 @@ class DbfRecord(object):
         for field in self.header.fields:
             value = self[field.name]
             if value is utils.INVALID_VALUE:
-                rows.append(
-                    template % (field, "None", "value cannot be decoded")
-                )
+                rows.append(template % (field, "None", "value cannot be decoded"))
             else:
                 rows.append(template % (field.name, value, type(value)))
         return "\n".join(rows)
@@ -144,9 +143,9 @@ class DbfRecord(object):
 
     def to_bytes(self):
         """Return string packed record values."""
-        return b''.join(
-            [(b' ', b'*')[self.deleted]] +
-            [
+        return b"".join(
+            [(b" ", b"*")[self.deleted]]
+            + [
                 _def.encode(_dat, encoding=self.header.code_page.encoding)
                 for (_def, _dat) in zip(self.header.fields, self.fields)
             ]
@@ -177,5 +176,6 @@ class DbfRecord(object):
             return self.fields[key]
         # assuming string field name
         self.fields[self.header.index_of_field_name(key)] = value
+
 
 # vim: et sts=4 sw=4 :
