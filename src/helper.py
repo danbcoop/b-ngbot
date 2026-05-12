@@ -60,22 +60,22 @@ def candidate_found(find_in: str, find: list[str]) -> bool:
 
 
 def code_remove_year(s: str) -> str:
-    # 1025DC0050 -> 105DC005
+    # 1025DC0050 -> 105DC0050
     return s[:2] + s[3:]
 
 
 def lunar_to_poc(s: str) -> str:
     if len(s) > 9:
         s = code_remove_year(s)
-        # 105DC005 -> DC105005
+        # 105DC0005 -> DC1050005
         return s[3:5] + s[:3] + s[5:]
     # 1025DC005 -> DC105005
     return s[4:6] + s[:4] + s[6:]
 
 
 def poc_to_lunar(s: str) -> str:
-    # DC105005 -> DC005
-    return s[:2] + s[-3:]
+    # DC1050005 -> DC0005
+    return s[:2] + s[-4:]
 
 
 def write_to_dbf(orders):
@@ -160,3 +160,13 @@ def prh_to_poc(code: str) -> str:
     except:
         pass
     return poc
+
+
+def poc_to_prh(code: str) -> str:
+    data = pd.read_csv(ospath("bin/PRH"), dtype=str, delimiter=";")
+    prh = ""
+    try:
+        prh = data.loc[data["MgCode"] == code]["Code"].values[0]
+    except:
+        pass
+    return prh
