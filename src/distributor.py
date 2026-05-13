@@ -116,13 +116,13 @@ class OrderList:
         self.fix_price()
         (*path, filename) = os.path.split(filename)
         (filename, extension) = filename.split(".")
-        filename = os.path.join(*path, filename)
+        # filename = os.path.join(*path, filename)
         self.data.to_excel(
-            f"{self.filename}_.xlsx",
+            f"{filename}_.xlsx",
             columns=self.print_order(),
             index=False,
         )
-        adjust_column_width(f"{self.filename}_.xlsx")
+        adjust_column_width(f"{filename}_.xlsx")
 
         if self.name == "PRH":
             self.data.to_csv(

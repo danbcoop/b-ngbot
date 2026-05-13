@@ -9,10 +9,19 @@ from dbfread import DBF
 
 from src.adjust_column_width import adjust_column_width
 from src.distributor import Dist, OrderList
-from src.helper import (FILESDIR, default_col_name, default_filename,
-                        default_filename_dbf, default_invoice,
-                        default_start_string, ospath, poc_to_lunar, poc_to_prh,
-                        type_invoice, write_to_dbf)
+from src.helper import (
+    FILESDIR,
+    default_col_name,
+    default_filename,
+    default_filename_dbf,
+    default_invoice,
+    default_start_string,
+    ospath,
+    poc_to_lunar,
+    poc_to_prh,
+    type_invoice,
+    write_to_dbf,
+)
 
 
 class GUI:
@@ -89,8 +98,7 @@ class GUI:
         write_to_dbf(self.dists)
         for dist in self.dists:
             dist.to_excel()
-        tk.messagebox.showinfo(
-            title=None, message="Import erfolgreich abgeschlossen!")
+        tk.messagebox.showinfo(title=None, message="Import erfolgreich abgeschlossen!")
 
     def add_mg_codes(self):
         start = self.dists[0].orderlist.data.shape[0] + 1
@@ -230,11 +238,10 @@ class ExportFrame:
             self.buttons[dbf_name] = ttk.Button(
                 root,
                 text=f"Auswahl für {dbf_name}.dbf ändern",
-                command=lambda d=dist, isdbf=True: self.select_file(d, isdbf)
+                command=lambda d=dist, isdbf=True: self.select_file(d, isdbf),
             )
 
-            self.labels[dbf_name] = tk.Label(
-                root, text=f"{dbf_name}: {default_fn}")
+            self.labels[dbf_name] = tk.Label(root, text=f"{dbf_name}: {default_fn}")
             self.spaces[dbf_name] = tk.Label(root, text="")
 
         start_button = tk.Button(
@@ -284,11 +291,20 @@ class ExportFrame:
             if dist.name == "DIAMOND":
                 continue
             order_list = pd.read_excel(dist.filename, dtype=str)
+            # Some order lists tend to use the first row for infos.
+            if (
+                order_list.columns[0].find("Unnamed") >= 0
+                or order_list.columns[1].find("Unnamed") >= 0
+            ):
+                order_list = pd.read_excel(dist.filename, header=1, dtype=str)
+
             order_list = order_list.to_dict()
             if dist.name == "DC":
+                code_col = "Code"
                 fn = self.PEP_filename
                 ispep = True
             else:
+                code_col = "MainIdentifier"
                 fn = self.MOD_filename
                 ispep = False
 
@@ -302,10 +318,10 @@ class ExportFrame:
                         code = poc_to_prh(str(record["POCODE"]))
                     qty = str(record["GESAMTBEST"])
                     order_list_index = 0
-                    for index in order_list["Code"]:
-                        if pd.isna(order_list["Code"][index]):
+                    for index in order_list[code_col]:
+                        if pd.isna(order_list[code_col][index]):
                             continue
-                        if code in order_list["Code"][index]:
+                        if code in order_list[code_col][index]:
                             order_list_index = index
                     order_list["Qty"][order_list_index] = qty
             except Exception:
@@ -313,13 +329,17 @@ class ExportFrame:
                 pass
             order_list = pd.DataFrame.from_dict(order_list)
 
+            # (*path, filename) = os.path.split(dist.filename)
+
             fn = f"order_{dist.name}.xlsx"
+            # fn = os.path.join(*path, fn)
             order_list.to_excel(fn, index=False)
             adjust_column_width(fn)
 
-            tk.messagebox.showinfo(
-                title=None, message="Export erfolgreich abgeschlossen!")
-            root.frame.set("Home")
+        tk.messagebox.showinfo(
+            title=None, message="Export erfolgreich abgeschlossen!"
+        )
+        root.frame.set("Home")
 
     def destroy(self):
         for i in self.labels:
@@ -342,8 +362,7 @@ class ColsFrame:
             selected_option = tk.StringVar(value=default_col_name(dist, col))
             self.option_vars.append(selected_option)
             self.col_options.append(
-                ttk.Combobox(root, textvariable=selected_option,
-                             state="readonly")
+                ttk.Combobox(root, textvariable=selected_option, state="readonly")
             )
             self.option_labels.append(tk.Label(root, text=f"{col}:"))
 
