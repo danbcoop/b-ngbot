@@ -44,6 +44,13 @@ def default_filename(dist: Dist) -> str:
             return filename
     return "Bitte eine Bestellliste wählen."
 
+def default_filename_dbf(dist: str) -> str:
+    ls = os.listdir(FILESDIR)
+    for filename in ls:
+        if candidate_found(filename, [dist]):
+            filename = os.path.join(FILESDIR, filename)
+            return filename
+    return "Bitte dbf-Datei wählen."
 
 def default_col_name(dist: Dist, col_name: str) -> str:
     for col in dist.orderlist.cols():
