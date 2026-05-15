@@ -1,12 +1,18 @@
+import os
 import time
 
 import keyboard
 import win32gui
 
+Y_PIXEL = 410
+
+if os.environ.get("COMPUTERNAME", "Unknown").upper() == "BÜRO2020":
+    Y_PIXEL = 380
+
 DELAY = 0.25
-EINGABE = (500, 410)
-CONFIRMJ = (569, 410)
-CONFIRMC = (485, 410)
+EINGABE = (500, Y_PIXEL)
+CONFIRMJ = (569, Y_PIXEL)
+CONFIRMC = (485, Y_PIXEL)
 
 
 class WindowFocusError(LookupError):
@@ -30,8 +36,7 @@ def focus_window(window_name: str):
             break
     if not window_handle:
         raise WindowFocusError(
-            f"Es konnte kein Fenster mit dem Namen {
-                window_name} gefunden werden!"
+            f"Es konnte kein Fenster mit dem Namen {window_name} gefunden werden!"
         )
     else:
         x0, y0, x1, y1 = win32gui.GetWindowRect(window_handle)
@@ -44,15 +49,15 @@ def focus_window(window_name: str):
 
 def type_code(code: str):
     print(EINGABE)
-    if check_pixel(*EINGABE):
+    if is_in_input_mode(*EINGABE):
         for letter in code:
             keyboard.press_and_release(letter)
 
-#    for x in range(100):
-#        print(f"{x}: {win32gui.GetPixel(win32gui.GetDC(win32gui.GetActiveWindow()), EINGABE[0]+x, EINGABE[1])}")
-#    time.sleep(60)
+    #    for x in range(100):
+    #        print(f"{x}: {win32gui.GetPixel(win32gui.GetDC(win32gui.GetActiveWindow()), EINGABE[0]+x, EINGABE[1])}")
+    #    time.sleep(60)
     time.sleep(DELAY)
-    if check_pixel(*CONFIRMJ):
+    if is_in_input_mode(*CONFIRMJ):
         keyboard.press_and_release("J")
         keyboard.press_and_release("c")
     else:
@@ -60,7 +65,7 @@ def type_code(code: str):
             keyboard.send("backspace")
 
 
-def check_pixel(x, y):
+def is_in_input_mode(x, y):
     TARGET_COLOR = 11184810
     return (
         win32gui.GetPixel(win32gui.GetDC(win32gui.GetActiveWindow()), x, y)
@@ -79,4 +84,3 @@ if __name__ == "__main__":
     keyboard.write("J")
     time.sleep(DELAY)
     keyboard.write("c")
-
