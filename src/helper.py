@@ -30,7 +30,7 @@ FILESDIR = ospath("./files")
 def default_invoice() -> str:
     ls = os.listdir(FILESDIR)
     for filename in ls:
-        if ".pdf" in filename:
+        if "LIEFERSCHEIN" in filename:
             path = os.path.join(FILESDIR, filename)
             return path
     return "Bitte eine Lieferscheindatei wählen."
