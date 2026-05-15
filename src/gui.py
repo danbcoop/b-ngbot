@@ -432,7 +432,7 @@ class TypeInFrame:
 
     def select_file(self):
         filetypes = (
-            ("Tabellen", "*.pdf"),
+            ("Tabellen", "*.xls"),
             ("All files", "*.*"),
         )
 
