@@ -4,9 +4,9 @@ import keyboard
 import win32gui
 
 DELAY = 0.25
-EINGABE = (500, 380)
-CONFIRMJ = (565, 380)
-CONFIRMC = (485, 380)
+EINGABE = (500, 410)
+CONFIRMJ = (569, 410)
+CONFIRMC = (485, 410)
 
 
 class WindowFocusError(LookupError):
@@ -39,19 +39,19 @@ def focus_window(window_name: str):
         global CONFIRMJ
         EINGABE = (EINGABE[0] + x0, EINGABE[1] + y0)
         CONFIRMJ = (CONFIRMJ[0] + x0, CONFIRMJ[1] + y0)
-        print(EINGABE)
         win32gui.SetForegroundWindow(window_handle)
 
 
 def type_code(code: str):
+    print(EINGABE)
     if check_pixel(*EINGABE):
         for letter in code:
             keyboard.press_and_release(letter)
 
+#    for x in range(100):
+#        print(f"{x}: {win32gui.GetPixel(win32gui.GetDC(win32gui.GetActiveWindow()), EINGABE[0]+x, EINGABE[1])}")
+#    time.sleep(60)
     time.sleep(DELAY)
-    # for x in range(500,640):
-    #     print(f"{x}: {win32gui.GetPixel(win32gui.GetDC(win32gui.GetActiveWindow()), x, 410)}")
-    # return
     if check_pixel(*CONFIRMJ):
         keyboard.press_and_release("J")
         keyboard.press_and_release("c")
@@ -79,3 +79,4 @@ if __name__ == "__main__":
     keyboard.write("J")
     time.sleep(DELAY)
     keyboard.write("c")
+
