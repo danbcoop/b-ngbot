@@ -1,7 +1,7 @@
 import time
 
 import keyboard
-# import win32gui
+import win32gui
 
 DELAY = 0.25
 EINGABE = (500, 380)

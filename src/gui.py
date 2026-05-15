@@ -5,15 +5,20 @@ from tkinter import ttk
 
 import numpy as np
 import pandas as pd
+from dbfread import DBF
 
+from src.adjust_column_width import adjust_column_width
 from src.distributor import Dist, OrderList
 from src.helper import (
     FILESDIR,
     default_col_name,
     default_filename,
+    default_filename_dbf,
     default_invoice,
     default_start_string,
     ospath,
+    poc_to_lunar,
+    poc_to_prh,
     type_invoice,
     write_to_dbf,
 )
@@ -81,9 +86,8 @@ class GUI:
                     self.dists_prepared.append(dist)
             case "Lieferschein eintippen":
                 self.current = TypeInFrame(self.root)
-
-            # case "Export":
-            #     self.current = ExportFrame(self.root, self.dists)
+            case "Export":
+                self.current = ExportFrame(self.root, self.dists)
             case _:
                 self.root.quit()
 
@@ -110,7 +114,7 @@ class GUI:
             ],
             axis=1,
         )
-        start = end # + 1
+        start = end  # + 1
         end = start + self.dists[2].orderlist.data.shape[0]
         mgcodes = list()
         for i in np.arange(start, end):
@@ -206,13 +210,144 @@ class FilenameFrame:
 
 class ExportFrame:
     def __init__(self, root, dists):
-        pass
+        self.buttons = dict()
+        self.labels = dict()
+        self.spaces = dict()
+        self.PEP = ""
+        self.MOD = ""
+        for dist in dists:
+            if dist.name == "DIAMOND":
+                continue
+            self.buttons[dist.name] = ttk.Button(
+                root,
+                text=f"Auswahl für {dist.name}-Bestellliste ändern",
+                command=lambda d=dist: self.select_file(d),
+            )
+            self.labels[dist.name] = tk.Label(
+                root, text=f"{dist.name}: {default_filename(dist)}"
+            )
+            self.spaces[dist.name] = tk.Label(root, text="")
+            if dist.name == "DC":
+                dbf_name = "PEP"
+                default_fn = default_filename_dbf("PEP")
+                self.PEP_filename = default_fn
+            else:
+                dbf_name = "MOD"
+                default_fn = default_filename_dbf("MOD")
+                self.MOD_filename = default_fn
+            self.buttons[dbf_name] = ttk.Button(
+                root,
+                text=f"Auswahl für {dbf_name}.dbf ändern",
+                command=lambda d=dist, isdbf=True: self.select_file(d, isdbf),
+            )
 
-        # data = pd.read_csv(ospath("bin/PRH"),dtype=str,delimiter=";")
-        # fn = os.path.join(FILESDIR, "MOD.DBF")
-        # with dbf.Dbf(fn) as db:
-        #     for record in db:
-        #         data.loc[data['code'] == record['POCODE']]['Qty'][0] = record['Menge']
+            self.labels[dbf_name] = tk.Label(root, text=f"{dbf_name}: {default_fn}")
+            self.spaces[dbf_name] = tk.Label(root, text="")
+
+        start_button = tk.Button(
+            root,
+            text="Start",
+            command=lambda: self.export(root, dists),
+        )
+        self.buttons["start"] = start_button
+
+        for dist in ["DC", "PRH", "PEP", "MOD"]:
+            self.labels[dist].pack(ipadx=10)
+            self.buttons[dist].pack(ipadx=20)
+            self.spaces[dist].pack()
+
+        start_button.pack(expand=True)
+
+    def select_file(self, dist, isdbf=False):
+        if isdbf:
+            filetypes = (
+                ("DBF-Datei", "*.DBF"),
+                ("All files", "*.*"),
+            )
+        else:
+            filetypes = (
+                ("Tabellen", "*.xls*"),
+                ("All files", "*.*"),
+            )
+
+        filename = fd.askopenfilename(
+            title="Bitte Datei wählen",
+            initialdir=FILESDIR,
+            filetypes=filetypes,
+        )
+        if isdbf:
+            if dist.name == "DC":
+                self.PEP_filename = filename
+                self.labels["PEP"].config(text=f"PEP.dbf: {filename}")
+            elif dist.name == "PRH":
+                self.MOD_filename = filename
+                self.labels["MOD"].config(text=f"MOD.dbf: {filename}")
+        else:
+            dist.filename = filename
+            self.labels[dist.name].config(text=f"{dist.name}: {filename}")
+
+    def export(self, root, dists):
+        for dist in dists:
+            if dist.name == "DIAMOND":
+                continue
+            order_list = pd.read_excel(dist.filename, dtype=str)
+            # Some order lists tend to use the first row for infos.
+            if (
+                order_list.columns[0].find("Unnamed") >= 0
+                or order_list.columns[1].find("Unnamed") >= 0
+            ):
+                order_list = pd.read_excel(dist.filename, header=1, dtype=str)
+
+            order_list = order_list.to_dict()
+            if dist.name == "DC":
+                code_col = "Code"
+                fn = self.PEP_filename
+                ispep = True
+            else:
+                code_col = "MainIdentifier"
+                fn = self.MOD_filename
+                ispep = False
+
+            table = DBF(fn)
+
+            try:
+                for record in table:
+                    if ispep:
+                        code = poc_to_lunar(str(record["POCODE"]))
+                    else:
+                        code = poc_to_prh(str(record["POCODE"]))
+                    qty = str(record["GESAMTBEST"])
+                    order_list_index = 0
+                    for index in order_list[code_col]:
+                        if pd.isna(order_list[code_col][index]):
+                            continue
+                        if code in order_list[code_col][index]:
+                            order_list_index = index
+                    order_list["Qty"][order_list_index] = qty
+            except Exception:
+                # No problem here, the dbf files were working with use faulty flags
+                pass
+            order_list = pd.DataFrame.from_dict(order_list)
+
+            # (*path, filename) = os.path.split(dist.filename)
+
+            fn = f"order_{dist.name}.xlsx"
+            # fn = os.path.join(*path, fn)
+            order_list.to_excel(fn, index=False)
+            adjust_column_width(fn)
+
+        tk.messagebox.showinfo(
+            title=None, message="Export erfolgreich abgeschlossen!"
+        )
+        root.frame.set("Home")
+
+    def destroy(self):
+        for i in self.labels:
+            self.labels[i].destroy()
+        for i in self.spaces:
+            self.spaces[i].destroy()
+        for i in self.buttons:
+            self.buttons[i].destroy()
 
 
 class ColsFrame:
