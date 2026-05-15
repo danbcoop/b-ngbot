@@ -5,7 +5,8 @@ import pandas as pd
 from dbf import dbf
 from src.distributor import Dist
 from src.keys import focus_window, type_code
-from src.pdf_reader import read_pdf
+# from src.pdf_reader import read_pdf
+from src.lieferschein_reader import load_lieferschein
 
 # def focus_window(a,b):
 #     pass
@@ -126,7 +127,7 @@ def type_invoice(invoice_path: str, start: str):
     # Set new default
     with open(ospath("bin/default_start"), "w") as fd:
         fd.write(start)
-    items = read_pdf(invoice_path, start)
+    items = load_lieferschein(invoice_path, start)
     for item in items:
         code = parse_code(item["Code"])
         if code:
