@@ -175,6 +175,7 @@ def poc_to_prh(code: str) -> str:
     prh = ""
     try:
         prh = data.loc[data["MgCode"] == code]["Code"].values[0]
+        print(data.loc[data["MgCode"] == code]["Code"].values)
     except:
         pass
     return prh

@@ -316,6 +316,7 @@ class ExportFrame:
                         code = poc_to_lunar(str(record["POCODE"]))
                     else:
                         code = poc_to_prh(str(record["POCODE"]))
+                        print(f"record: {record["POCODE"]} code: {code}")
                     qty = str(record["GESAMTBEST"])
                     order_list_index = 0
                     for index in order_list[code_col]:

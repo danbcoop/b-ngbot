@@ -2,7 +2,7 @@ import os
 import time
 
 import keyboard
-import win32gui
+# import win32gui
 
 Y_PIXEL = 410
 
