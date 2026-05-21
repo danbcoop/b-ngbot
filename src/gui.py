@@ -298,6 +298,8 @@ class ExportFrame:
             ):
                 order_list = pd.read_excel(dist.filename, header=1, dtype=str)
 
+            qty_col = order_list.columns[0]
+
             order_list = order_list.to_dict()
             if dist.name == "DC":
                 code_col = "Code"
@@ -324,8 +326,9 @@ class ExportFrame:
                             continue
                         if code in order_list[code_col][index]:
                             order_list_index = index
-                    order_list["Qty"][order_list_index] = qty
+                    order_list[qty_col][order_list_index] = qty
             except Exception:
+                print("exeption")
                 # No problem here, the dbf files were working with use faulty flags
                 pass
             order_list = pd.DataFrame.from_dict(order_list)
