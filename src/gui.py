@@ -299,14 +299,13 @@ class ExportFrame:
                 order_list = pd.read_excel(dist.filename, header=1, dtype=str)
 
             qty_col = order_list.columns[0]
+            code_col = order_list.columns[1]
 
             order_list = order_list.to_dict()
             if dist.name == "DC":
-                code_col = "Code"
                 fn = self.PEP_filename
                 ispep = True
             else:
-                code_col = "MainIdentifier"
                 fn = self.MOD_filename
                 ispep = False
 
